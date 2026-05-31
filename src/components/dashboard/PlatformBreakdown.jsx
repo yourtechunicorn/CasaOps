@@ -139,7 +139,7 @@ export default function PlatformBreakdown() {
         grossAdr: p.nights > 0 ? p.gross / p.nights : 0,
         netAdr:   p.nights > 0 ? p.net   / p.nights : 0,
       }))
-  }, [rows, from, to])
+  }, [rows, from, to, platformMap])
 
   const totals = useMemo(() => ({
     platforms: platforms.length,
