@@ -69,7 +69,8 @@ function PieLabel({ cx, cy, midAngle, outerRadius, percent, name }) {
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function PlatformBreakdown() {
-  const [units,   setUnits]   = useState([])
+  const [units,       setUnits]       = useState([])
+  const [platformMap, setPlatformMap] = useState({})  // id -> name
   const [unitId,  setUnitId]  = useState('')  // '' = all units
   const [from,    setFrom]    = useState(DEFAULT_FROM)
   const [to,      setTo]      = useState(DEFAULT_TO)
@@ -78,7 +79,15 @@ export default function PlatformBreakdown() {
   const [error,   setError]   = useState(null)
 
   useEffect(() => {
-    supabase.from('units').select('id, name').order('name').then(({ data }) => setUnits(data ?? []))
+    Promise.all([
+      supabase.from('units').select('id, name').order('name'),
+      supabase.from('platforms').select('id, name').order('name'),
+    ]).then(([{ data: u }, { data: p }]) => {
+      setUnits(u ?? [])
+      const map = {}
+      ;(p ?? []).forEach(pl => { map[pl.id] = pl.name })
+      setPlatformMap(map)
+    })
   }, [])
 
   useEffect(() => {
@@ -113,7 +122,7 @@ export default function PlatformBreakdown() {
     const map = {}
     rows.filter(inRange).forEach(r => {
       const key  = r.platform_id ?? r.platform_name ?? r.name ?? 'Unknown'
-      const name = r.platform_name ?? r.name ?? 'Unknown'
+      const name = (r.platform_id && platformMap[r.platform_id]) ?? r.platform_name ?? r.name ?? 'Unknown'
       if (!map[key]) map[key] = { id: key, name, bookings: 0, nights: 0, gross: 0, net: 0 }
       map[key].bookings += rowBookings(r)
       map[key].nights   += rowNights(r)
