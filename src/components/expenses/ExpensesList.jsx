@@ -34,8 +34,8 @@ export default function ExpensesList() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   // server-side filters
-  const [unitId,     setUnitId]     = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const [unitId,       setUnitId]       = useState('')
+  const [categorySlug, setCategorySlug] = useState('')
   const [type,       setType]       = useState('')
   const [dateFrom,   setDateFrom]   = useState('')
   const [dateTo,     setDateTo]     = useState('')
@@ -52,7 +52,7 @@ export default function ExpensesList() {
   useEffect(() => {
     Promise.all([
       supabase.from('units').select('id, name').order('name'),
-      supabase.from('expense_categories').select('id, name').order('name'),
+      supabase.from('expense_categories').select('slug, label').order('label'),
     ]).then(([{ data: u }, { data: c }]) => {
       setUnits(u ?? [])
       setCategories(c ?? [])
@@ -66,13 +66,13 @@ export default function ExpensesList() {
       setError(null)
       let q = supabase
         .from('expenses')
-        .select('id, unit_id, expense_category_id, type, description, amount, expense_date, is_paid, payment_date, notes, units(name)')
+        .select('id, unit_id, category_slug, expense_type, description, amount, expense_date, is_paid, paid_date, notes, units(name)')
         .order('expense_date', { ascending: false })
         .limit(500)
 
-      if (unitId)     q = q.eq('unit_id', unitId)
-      if (categoryId) q = q.eq('expense_category_id', categoryId)
-      if (type)       q = q.eq('type', type)
+      if (unitId)       q = q.eq('unit_id', unitId)
+      if (categorySlug) q = q.eq('category_slug', categorySlug)
+      if (type)         q = q.eq('expense_type', type)
       if (dateFrom)   q = q.gte('expense_date', dateFrom)
       if (dateTo)     q = q.lte('expense_date', dateTo)
       if (paidFilter === 'paid')   q = q.eq('is_paid', true)
@@ -86,7 +86,7 @@ export default function ExpensesList() {
     }
     load()
     return () => { cancelled = true }
-  }, [unitId, categoryId, type, dateFrom, dateTo, paidFilter, refreshKey])
+  }, [unitId, categorySlug, type, dateFrom, dateTo, paidFilter, refreshKey])
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -94,7 +94,7 @@ export default function ExpensesList() {
       const bv = b[sortKey] ?? ''
       if (sortKey === 'amount') return sortDir * (num(bv) - num(av))
       if (sortKey === 'unit')   return sortDir * String(a.units?.name ?? '').localeCompare(String(b.units?.name ?? ''))
-      if (sortKey === 'category') return sortDir * String(categories.find(c => c.id === a.expense_category_id)?.name ?? '').localeCompare(String(categories.find(c => c.id === b.expense_category_id)?.name ?? ''))
+      if (sortKey === 'category') return sortDir * String(categories.find(c => c.slug === a.category_slug)?.label ?? '').localeCompare(String(categories.find(c => c.slug === b.category_slug)?.label ?? ''))
       return sortDir * String(av).localeCompare(String(bv))
     })
   }, [rows, sortKey, sortDir])
@@ -120,8 +120,8 @@ export default function ExpensesList() {
   async function togglePaid(row) {
     const newPaid = !row.is_paid
     const update  = {
-      is_paid:      newPaid,
-      payment_date: newPaid ? (row.payment_date || new Date().toISOString().slice(0, 10)) : null,
+      is_paid:   newPaid,
+      paid_date: newPaid ? (row.paid_date || new Date().toISOString().slice(0, 10)) : null,
     }
     const { error: e } = await supabase.from('expenses').update(update).eq('id', row.id)
     if (e) { setError(e.message); return }
@@ -160,9 +160,9 @@ export default function ExpensesList() {
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Category</p>
-          <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className={inputCls}>
+          <select value={categorySlug} onChange={e => setCategorySlug(e.target.value)} className={inputCls}>
             <option value="">All categories</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
           </select>
         </div>
         <div>
@@ -231,10 +231,10 @@ export default function ExpensesList() {
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-gray-600 tabular-nums whitespace-nowrap">{r.expense_date}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.units?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{categories.find(c => c.id === r.expense_category_id)?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{categories.find(c => c.slug === r.category_slug)?.label ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_BADGE[r.type] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {r.type}
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_BADGE[r.expense_type] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {r.expense_type}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-800 max-w-[220px] truncate" title={r.description}>{r.description}</td>
@@ -252,7 +252,7 @@ export default function ExpensesList() {
                       </button>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs tabular-nums whitespace-nowrap">
-                      {r.payment_date ?? <span className="text-gray-300">—</span>}
+                      {r.paid_date ?? <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3 justify-end">

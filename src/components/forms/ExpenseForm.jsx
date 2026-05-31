@@ -11,30 +11,30 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 function formFromData(e) {
   return {
-    unit_id:             String(e.unit_id ?? ''),
-    expense_category_id: String(e.expense_category_id ?? ''),
-    expense_template_id: '',
-    type:                e.type ?? 'recurring',
-    description:         e.description ?? '',
-    amount:              String(e.amount ?? ''),
-    expense_date:        e.expense_date ?? today(),
-    is_paid:             e.is_paid ?? false,
-    payment_date:        e.payment_date ?? '',
-    notes:               e.notes ?? '',
+    unit_id:       String(e.unit_id ?? ''),
+    category_slug: String(e.category_slug ?? ''),
+    template_id:   '',
+    expense_type:  e.expense_type ?? 'recurring',
+    description:   e.description ?? '',
+    amount:        String(e.amount ?? ''),
+    expense_date:  e.expense_date ?? today(),
+    is_paid:       e.is_paid ?? false,
+    paid_date:     e.paid_date ?? '',
+    notes:         e.notes ?? '',
   }
 }
 
 const EMPTY_FORM = {
-  unit_id: '',
-  expense_category_id: '',
-  expense_template_id: '',
-  type: 'recurring',
-  description: '',
-  amount: '',
-  expense_date: today(),
-  is_paid: false,
-  payment_date: '',
-  notes: '',
+  unit_id:       '',
+  category_slug: '',
+  template_id:   '',
+  expense_type:  'recurring',
+  description:   '',
+  amount:        '',
+  expense_date:  today(),
+  is_paid:       false,
+  paid_date:     '',
+  notes:         '',
 }
 
 function Field({ label, required, children, hint }) {
@@ -86,7 +86,7 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
     async function fetchLookups() {
       const [{ data: u }, { data: c }, { data: t }] = await Promise.all([
         supabase.from('units').select('id, name').order('name'),
-        supabase.from('expense_categories').select('id, name').order('name'),
+        supabase.from('expense_categories').select('slug, label').order('label'),
         supabase.from('expense_templates').select('*').order('name'),
       ])
       setUnits(u ?? [])
@@ -110,31 +110,30 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
   function handleToggle(val) {
     setForm(prev => ({
       ...prev,
-      is_paid: val,
-      payment_date: val ? today() : '',
+      is_paid:   val,
+      paid_date: val ? today() : '',
     }))
   }
 
-  function handleTypeClick(type) {
-    setForm(prev => ({ ...prev, type, expense_template_id: '' }))
+  function handleTypeClick(expense_type) {
+    setForm(prev => ({ ...prev, expense_type, template_id: '' }))
   }
 
   function handleTemplateChange(e) {
     const templateId = e.target.value
     if (!templateId) {
-      setForm(prev => ({ ...prev, expense_template_id: '' }))
+      setForm(prev => ({ ...prev, template_id: '' }))
       return
     }
     const tpl = templates.find(t => t.id === templateId)
     if (!tpl) return
     setForm(prev => ({
       ...prev,
-      expense_template_id: templateId,
-      // try common column-name variants for category and type
-      expense_category_id: tpl.expense_category_id ?? tpl.category_id ?? prev.expense_category_id,
-      type:        tpl.type ?? prev.type,
-      description: tpl.description ?? tpl.name ?? prev.description,
-      amount:      tpl.amount != null ? String(tpl.amount) : prev.amount,
+      template_id:   templateId,
+      category_slug: tpl.category_slug ?? prev.category_slug,
+      expense_type:  tpl.expense_type ?? prev.expense_type,
+      description:   tpl.description ?? tpl.name ?? prev.description,
+      amount:        tpl.amount != null ? String(tpl.amount) : prev.amount,
     }))
   }
 
@@ -144,16 +143,16 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
     setSubmitError(null)
 
     const payload = {
-      unit_id:             form.unit_id,
-      expense_category_id: form.expense_category_id || null,
-      expense_template_id: form.expense_template_id || null,
-      type:                form.type,
-      description:         form.description,
-      amount:              parseFloat(form.amount),
-      expense_date:        form.expense_date,
-      is_paid:             form.is_paid,
-      payment_date:        form.is_paid && form.payment_date ? form.payment_date : null,
-      notes:               form.notes || null,
+      unit_id:       form.unit_id,
+      category_slug: form.category_slug || null,
+      template_id:   form.template_id || null,
+      expense_type:  form.expense_type,
+      description:   form.description,
+      amount:        parseFloat(form.amount),
+      expense_date:  form.expense_date,
+      is_paid:       form.is_paid,
+      paid_date:     form.is_paid && form.paid_date ? form.paid_date : null,
+      notes:         form.notes || null,
     }
 
     const { error } = editData
@@ -171,7 +170,7 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
     setLoading(false)
   }
 
-  const templatesForType = templates.filter(t => !t.type || t.type === form.type)
+  const templatesForType = templates.filter(t => !t.expense_type || t.expense_type === form.expense_type)
 
   return (
     <div className="max-w-2xl">
@@ -205,12 +204,12 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
                 type="button"
                 onClick={() => handleTypeClick(value)}
                 className={`flex-1 rounded-lg border px-3 py-3 text-left transition ${
-                  form.type === value
+                  form.expense_type === value
                     ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
-                <span className={`block text-sm font-medium ${form.type === value ? 'text-brand-700' : 'text-gray-800'}`}>
+                <span className={`block text-sm font-medium ${form.expense_type === value ? 'text-brand-700' : 'text-gray-800'}`}>
                   {label}
                 </span>
                 <span className="block text-xs text-gray-400 mt-0.5 leading-snug">{hint}</span>
@@ -228,9 +227,9 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
             </select>
           </Field>
           <Field label="Category">
-            <select name="expense_category_id" value={form.expense_category_id} onChange={handle} className={inputClass}>
+            <select name="category_slug" value={form.category_slug} onChange={handle} className={inputClass}>
               <option value="">Select category…</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categories.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
             </select>
           </Field>
         </section>
@@ -240,8 +239,8 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
           <section className="px-6 py-4 bg-gray-50">
             <Field label="Quick-fill from template" hint="Selecting a template pre-fills description, category, and amount">
               <select
-                name="expense_template_id"
-                value={form.expense_template_id}
+                name="template_id"
+                value={form.template_id}
                 onChange={handleTemplateChange}
                 className={inputClass}
               >
@@ -317,8 +316,8 @@ export default function ExpenseForm({ onSuccess, editData = null, onCancel }) {
               <Field label="Payment date" hint="When this expense was actually paid">
                 <input
                   type="date"
-                  name="payment_date"
-                  value={form.payment_date}
+                  name="paid_date"
+                  value={form.paid_date}
                   onChange={handle}
                   className={inputClass}
                 />
