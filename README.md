@@ -1,16 +1,59 @@
-# React + Vite
+# Casa Ops
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A property management dashboard for short-term rental operators. Built to track income, expenses, bookings, and maintenance across multiple units — with a roadmap toward owner-facing reporting and cleaner task management.
 
-Currently, two official plugins are available:
+**Status:** First iteration — core tracking features built, real data connected via Supabase.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## What It Does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Overview dashboard** — income, expenses, and occupancy across all units at a glance
+- **Per-unit view** — drill into any unit's performance individually
+- **Bookings** — log and manage bookings, with platform breakdown (Airbnb, Booking.com, direct, etc.)
+- **Expenses** — track costs per unit with categorization
+- **Guest origins** — visualize where guests are coming from by country
+- **Maintenance tracker** — log and monitor unit maintenance tasks
+- **CSV import** — bulk import bookings from exported platform reports
 
-## Expanding the ESLint configuration
+## Roadmap
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Owner portal — property owners can log in and see their unit's earnings
+- Cleaner view — assigned units, task checklist, laundry tracking, task submission
+
+---
+
+## Tech Stack
+
+- React + Vite
+- Tailwind CSS
+- Supabase (auth + database)
+- Netlify (deployment)
+
+---
+
+## Setup
+
+`\ash
+git clone https://github.com/yourtechunicorn/casa-ops
+cd casa-ops
+npm install
+cp .env.example .env.local
+`\
+
+Add your Supabase credentials to `.env.local`:
+
+`\
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+`\
+
+Then run:
+
+`\ash
+npm run dev
+`\
+
+---
+
+*By Pam Baroro — [pambaroro.com](https://pambaroro.com)*
