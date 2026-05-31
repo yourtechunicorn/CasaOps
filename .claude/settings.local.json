@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\Pam\\\\Documents\\\\GitHub\\\\SleepoverSpaces\\\\casa-ops\\\\src\\\\components\\\\maintenance\")",
+      "Bash(npm install *)"
+    ]
+  }
+}
