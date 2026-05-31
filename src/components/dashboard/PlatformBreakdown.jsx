@@ -38,8 +38,8 @@ function rowMonthKey(row) {
 
 const rowBookings = (r) => num(r.booking_count ?? r.total_bookings ?? r.bookings ?? r.num_bookings)
 const rowNights   = (r) => num(r.total_nights  ?? r.nights         ?? r.num_nights)
-const rowGross    = (r) => num(r.gross_revenue  ?? r.gross_amount   ?? r.total_gross  ?? r.income ?? r.gross)
-const rowNet      = (r) => num(r.net_revenue    ?? r.net_payout     ?? r.total_net    ?? r.net)
+const rowGross    = (r) => num(r.gross_income   ?? r.gross_revenue  ?? r.gross_amount ?? r.total_gross ?? r.income ?? r.gross)
+const rowNet      = (r) => num(r.net_income     ?? r.net_revenue    ?? r.net_payout   ?? r.total_net   ?? r.net)
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
@@ -69,8 +69,7 @@ function PieLabel({ cx, cy, midAngle, outerRadius, percent, name }) {
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function PlatformBreakdown() {
-  const [units,       setUnits]       = useState([])
-  const [platformMap, setPlatformMap] = useState({})  // id -> name
+  const [units,   setUnits]   = useState([])
   const [unitId,  setUnitId]  = useState('')  // '' = all units
   const [from,    setFrom]    = useState(DEFAULT_FROM)
   const [to,      setTo]      = useState(DEFAULT_TO)
@@ -79,15 +78,7 @@ export default function PlatformBreakdown() {
   const [error,   setError]   = useState(null)
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('units').select('id, name').order('name'),
-      supabase.from('platforms').select('id, name').order('name'),
-    ]).then(([{ data: u }, { data: p }]) => {
-      setUnits(u ?? [])
-      const map = {}
-      ;(p ?? []).forEach(pl => { map[pl.id] = pl.name })
-      setPlatformMap(map)
-    })
+    supabase.from('units').select('id, name').order('name').then(({ data }) => setUnits(data ?? []))
   }, [])
 
   useEffect(() => {
@@ -121,8 +112,8 @@ export default function PlatformBreakdown() {
     }
     const map = {}
     rows.filter(inRange).forEach(r => {
-      const key  = r.platform_id ?? r.platform_name ?? r.name ?? 'Unknown'
-      const name = (r.platform_id && platformMap[r.platform_id]) ?? r.platform_name ?? r.name ?? 'Unknown'
+      const key  = r.platform ?? r.platform_id ?? r.platform_name ?? r.name ?? 'Unknown'
+      const name = r.platform ?? r.platform_name ?? r.name ?? 'Unknown'
       if (!map[key]) map[key] = { id: key, name, bookings: 0, nights: 0, gross: 0, net: 0 }
       map[key].bookings += rowBookings(r)
       map[key].nights   += rowNights(r)
@@ -139,7 +130,7 @@ export default function PlatformBreakdown() {
         grossAdr: p.nights > 0 ? p.gross / p.nights : 0,
         netAdr:   p.nights > 0 ? p.net   / p.nights : 0,
       }))
-  }, [rows, from, to, platformMap])
+  }, [rows, from, to])
 
   const totals = useMemo(() => ({
     platforms: platforms.length,
